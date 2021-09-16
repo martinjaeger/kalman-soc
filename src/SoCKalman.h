@@ -4,12 +4,13 @@
 
 /**
  * @brief Calculated battery state of charge (SoC) using a extended kalman filter.
- * Math currently uses floating point arithmetic. Can only record diffreences in soc at a 30 min interval
- * or greater.
+ *
+ * Math currently uses floating point arithmetic. Can only record differences in soc at a 30 min
+ * interval or greater.
  */
 class SoCKalman
 {
-  public:
+public:
     SoCKalman();
 
     /**
@@ -18,7 +19,8 @@ class SoCKalman
      *
      * @param batteryEff, batteryVoltage, initialSoC (optional)
      */
-    void init(bool isBattery12V, bool isBatteryLithium, uint32_t batteryEff, uint32_t batteryVoltage, uint32_t initialSoC);
+    void init(bool isBattery12V, bool isBatteryLithium, uint32_t batteryEff,
+              uint32_t batteryVoltage, uint32_t initialSoC);
 
     /**
      * @brief return current state of charge
@@ -36,15 +38,22 @@ class SoCKalman
 
     /**
      * @brief calculate new soc based on how much power entered/exited the battery in a given
-     * window as well as the battery voltage, also recalculate battery efficiency and 
+     * window as well as the battery voltage, also recalculate battery efficiency and
      * reset soc = 100% if battery is in float
      *
-     * @param isBatteryInFloat, isBatteryLithium, batteryMilliAmps, batteryVoltage, batteryMilliWatts, samplePeriodMilliSec, batteryCapacity
+     * @param isBatteryInFloat True if battery is in float charging phase
+     * @param isBatteryLithium
+     * @param batteryMilliAmps
+     * @param batteryVoltage
+     * @param batteryMilliWatts
+     * @param samplePeriodMilliSec
+     * @param batteryCapacity Battery capacity in Wh
      */
-    void sample(bool isBatteryInFloat, int32_t batteryMilliAmps, uint32_t batteryVoltage, int32_t batteryMilliWatts, uint32_t samplePeriodMilliSec,
-        uint32_t batteryCapacity);
+    void sample(bool isBatteryInFloat, int32_t batteryMilliAmps, uint32_t batteryVoltage,
+                int32_t batteryMilliWatts, uint32_t samplePeriodMilliSec,
+                uint32_t batteryCapacity);
 
-  private:
+private:
     uint32_t _previousSoC;
     uint32_t _batteryEff;
     float _pval;
@@ -55,19 +64,21 @@ class SoCKalman
     float _q[9];
     float _a[9];
     float _at[9];
-    float _h;
-    float _H[3];
+    float _h;         // Predicted voltage using simple equivalent-circuit model
+    float _H[3];      // 0: OCV gradient (dV/dSoC), 1: measured current (A), 2: offset
     float _Ht[3];
     float _G[3];
     bool _isBattery12V;
     bool _isBatteryLithium;
     uint32_t _millisecondsInFloat = 0;
     uint32_t _floatResetDuration = 600000;  // 10 minutes in milliseconds
-    int32_t _x[3] = { 0, 0, 0 };
+    int32_t _x[3] = { 0, 0, 0 };    // 0: SOC, 1: R, 2: voltage offset?
     uint8_t _n = 3;
     uint8_t _m = 1;
-    const uint32_t SOC_SCALED_HUNDRED_PERCENT = 100000;  // 100% charge = 100000
-    const uint32_t SOC_SCALED_MAX = 2 * SOC_SCALED_HUNDRED_PERCENT;  // allow soc to track up higher than 100% to gauge efficiency
+    // 100% charge = 100000
+    const uint32_t SOC_SCALED_HUNDRED_PERCENT = 100000;
+    // allow soc to track up higher than 100% to gauge efficiency
+    const uint32_t SOC_SCALED_MAX = 2 * SOC_SCALED_HUNDRED_PERCENT;
 
     /**
      * @brief estimate an initial soc based on battery voltage
@@ -80,14 +91,16 @@ class SoCKalman
 
     /**
      * @brief project the state of charge ahead one step using a Coulomb counting model
-     * 
+     *
      * @param isBatteryinFloat, batteryMilliWatts, samplePeridoMilliSec, batteryCapacity
      */
-    void f(bool isBatteryInFloat, int32_t batteryMilliWatts, uint32_t samplePeriodMilliSec, uint32_t batteryCapacity);
+    void f(bool isBatteryInFloat, int32_t batteryMilliWatts, uint32_t samplePeriodMilliSec,
+           uint32_t batteryCapacity);
 
     /**
-     * @brief predict the measurable value (voltage) ahead one step using the newly estimated state of charge
-     * 
+     * @brief predict the measurable value (voltage) ahead one step using the newly estimated
+     * state of charge
+     *
      * @param isBatteryLithium, batteryMilliAmps
      */
     void h(int32_t batteryMilliAmps);
